@@ -76,6 +76,7 @@ def train(episodes, net, optimizer):
 
         cmpo_loss, v_loss = 0, 0
         for t in range(K, -1, -1):
+            # sz[:, t] == z cmpo(s)
             cmpo_loss += -torch.mean(sea[:, t] / sz[:, t] * torch.log(ps[t].gather(1, sa[:, t].type(torch.int64))), dim=1).sum()
             v_loss += torch.sum(((vs[t] - r[:, t]) ** 2) / 2)
 

@@ -1,3 +1,7 @@
+import queue
+import signal
+import multiprocessing
+
 import torch.optim as optim
 import numpy as np
 
@@ -30,7 +34,7 @@ def vs_random(net, n=100):
 def main():
     # Main algorithm of Muesli
 
-    num_games = 50000
+    num_games = 30000
     num_games_one_epoch = 40
     num_sampled_actions = 10
     simulation_depth = 1
@@ -56,8 +60,8 @@ def main():
         sampled_infos = []
         while not state.terminal():
             feature = state.feature()
-            rp_root = net.representation.inference(feature)
-            p_root, v_root = net.prediction.inference(rp_root)
+            rp_root = net.representation.inference(feature)  # rp_root == s
+            p_root, v_root = net.prediction.inference(rp_root)  # v_root == v p prior(s)
             p_mask = np.zeros_like(p_root)
             p_mask[state.legal_actions()] = 1
             p_root *= p_mask
@@ -67,7 +71,7 @@ def main():
             policies.append(p_root)
 
             actions, exadvs = [], []
-            for i in range(num_sampled_actions):
+            for i in range(num_sampled_actions):  # num_sampled_actions == N
                 action = np.random.choice(np.arange(len(p_root)), p=p_root)
                 actions.append(action)
 
@@ -80,13 +84,13 @@ def main():
                     qs.append(-v if t % 2 == 0 else v)
                     action = np.random.choice(np.arange(len(p)), p=p)
 
-                q = np.mean(qs)
-                exadvs.append(np.exp(np.clip(q - v_root, -C, C)))
+                q = np.mean(qs)  # q == q p prior(s, a)
+                exadvs.append(np.exp(np.clip(q - v_root, -C, C)))  # q - v_root == adv(s, a)
 
             exadv_sum = np.sum(exadvs)
             zs = []
             for exadv in exadvs:
-                z = (1 + exadv_sum - exadv) / num_sampled_actions
+                z = (1 + exadv_sum - exadv) / num_sampled_actions  # == z cmpo i (s)
                 zs.append(z)
             sampled_infos.append({'a': actions, 'q': qs, 'exadv': exadvs, 'z': zs})
 

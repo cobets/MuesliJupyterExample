@@ -124,7 +124,7 @@ class Net(nn.Module):
         self.dynamics = Dynamics(rp_shape, action_shape)
 
     def predict(self, state0, path):
-        '''Predict p and v from original state and path'''
+        # Predict p and v from original state and path
         outputs = []
         x = state0.feature()
         rp = self.representation.inference(x)
