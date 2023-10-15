@@ -3,7 +3,7 @@
 import torch
 import numpy as np
 
-from state import State
+from state_connect4 import State
 
 batch_size = 32
 num_steps = 100
@@ -94,6 +94,6 @@ def train(episodes, net, optimizer):
         optimizer.step()
 
     data_count = num_steps * batch_size
-    print('pg_loss %f cmpo_loss %f v_loss %f' % (
-    pg_loss_sum / data_count, cmpo_loss_sum / data_count, v_loss_sum / data_count))
-    return net
+
+    return net, pg_loss_sum / data_count, cmpo_loss_sum / data_count, v_loss_sum / data_count
+

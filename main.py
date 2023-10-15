@@ -1,11 +1,8 @@
-import queue
-import signal
-import multiprocessing
-
+from torch.utils.tensorboard import SummaryWriter
 import torch.optim as optim
 import numpy as np
 
-from state import State
+from state_connect4 import State
 from nets import Net, show_net
 from train import train
 
@@ -34,20 +31,30 @@ def vs_random(net, n=100):
 def main():
     # Main algorithm of Muesli
 
-    num_games = 30000
+    num_games = 50000
     num_games_one_epoch = 40
     num_sampled_actions = 10
     simulation_depth = 1
 
     C = 1
 
+    writer = SummaryWriter()
+
     net = Net()
     optimizer = optim.SGD(net.parameters(), lr=3e-4, weight_decay=3e-5, momentum=0.8)
 
     # Display battle results
-    vs_random_sum = vs_random(net)
-    print('vs_random   win: %d  draw: %d  lose: %d' %
-          (vs_random_sum.get(1, 0), vs_random_sum.get(0, 0), vs_random_sum.get(-1, 0)))
+    vs_random_once = vs_random(net)
+
+    writer.add_scalars(
+        'train/battle',
+        {
+            'win': vs_random_once.get(1, 0),
+            'draw': vs_random_once.get(0, 0),
+            'lose': vs_random_once.get(-1, 0)
+        },
+        -1
+    )
 
     episodes = []
     result_distribution = {1: 0, 0: 0, -1: 0}
@@ -109,22 +116,35 @@ def main():
             'reward': reward,
             'sampled_info': sampled_infos})
 
-        if g % num_games_one_epoch == 0:
-            print('game ', end='')
-        print(g, ' ', end='')
-
         # Training of neural net
         if (g + 1) % num_games_one_epoch == 0:
-            # Show the result distributiuon of generated episodes
-            print('generated = ', sorted(result_distribution.items()))
-            net = train(episodes, net, optimizer)
+            # Show the result distribution of generated episodes
+            print(f'game: {g} generated: {sorted(result_distribution.items())}')
+
+            net, pg_loss, cmpo_loss, v_loss = train(episodes, net, optimizer)
+
+            writer.add_scalars(
+                'train/loss',
+                {
+                    'pg_loss': pg_loss,
+                    'cmpo_loss': cmpo_loss,
+                    'v_loss': v_loss
+                },
+                g
+            )
+
             vs_random_once = vs_random(net)
-            print('vs_random   win: %d  draw: %d  lose: %d' %
-                  (vs_random_once.get(1, 0), vs_random_once.get(0, 0), vs_random_once.get(-1, 0)))
-            for r, n in vs_random_once.items():
-                vs_random_sum[r] += n
-            print('(total)           win: %d  draw: %d  lose: %d ' %
-                  (vs_random_sum.get(1, 0), vs_random_sum.get(0, 0), vs_random_sum.get(-1, 0)))
+
+            writer.add_scalars(
+                'train/battle',
+                {
+                    'win': vs_random_once.get(1, 0),
+                    'draw': vs_random_once.get(0, 0),
+                    'lose': vs_random_once.get(-1, 0)
+                },
+                g
+            )
+
             # show_net(net, State())
             # show_net(net, State().play('A1 C1 A2 C2'))
             # show_net(net, State().play('A1 B2 C3 B3 C1'))
