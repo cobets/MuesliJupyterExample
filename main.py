@@ -2,19 +2,18 @@ from torch.utils.tensorboard import SummaryWriter
 import torch.optim as optim
 import numpy as np
 
-from state_connect4 import State
 from nets import Net, show_net
 from train import train
 
 #  Battle against random agents
 
 
-def vs_random(net, n=100):
+def vs_random(net, state_class, n=100):
     results = {}
     for i in range(n):
         first_turn = i % 2 == 0
         turn = first_turn
-        state = State()
+        state = state_class()
         while not state.terminal():
             if turn:
                 p, _ = net.predict(state, [])[-1]
@@ -28,7 +27,7 @@ def vs_random(net, n=100):
     return results
 
 
-def main():
+def main(state_class):
     # Main algorithm of Muesli
 
     num_games = 50000
@@ -40,11 +39,11 @@ def main():
 
     writer = SummaryWriter()
 
-    net = Net()
+    net = Net(state_class)
     optimizer = optim.SGD(net.parameters(), lr=3e-4, weight_decay=3e-5, momentum=0.8)
 
     # Display battle results
-    vs_random_once = vs_random(net)
+    vs_random_once = vs_random(net, state_class)
 
     writer.add_scalars(
         'train/battle',
@@ -61,7 +60,7 @@ def main():
 
     for g in range(num_games):
         # Generate one episode
-        state = State()
+        state = state_class()
 
         features, policies, selected_actions, selected_action_features = [], [], [], []
         sampled_infos = []
@@ -121,7 +120,7 @@ def main():
             # Show the result distribution of generated episodes
             print(f'game: {g} generated: {sorted(result_distribution.items())}')
 
-            net, pg_loss, cmpo_loss, v_loss = train(episodes, net, optimizer)
+            net, pg_loss, cmpo_loss, v_loss = train(episodes, net, optimizer, state_class)
 
             writer.add_scalars(
                 'train/loss',
@@ -133,7 +132,7 @@ def main():
                 g
             )
 
-            vs_random_once = vs_random(net)
+            vs_random_once = vs_random(net, state_class)
 
             writer.add_scalars(
                 'train/battle',
@@ -154,20 +153,26 @@ def main():
     return net
 
 
-if __name__ == '__main__':
-    net = main()
+def test_tic_tac_toe(net, state_class):
     print('initial state')
-    show_net(net, State())
+    show_net(net, state_class())
 
     print('WIN by put')
-    show_net(net, State().play('A1 C1 A2 C2'))
+    show_net(net, state_class().play('A1 C1 A2 C2'))
 
     print('LOSE by opponent\'s double')
-    show_net(net, State().play('B2 A2 A3 C1 B3'))
+    show_net(net, state_class().play('B2 A2 A3 C1 B3'))
 
     print('WIN through double')
-    show_net(net, State().play('B2 A2 A3 C1'))
+    show_net(net, state_class().play('B2 A2 A3 C1'))
 
     # hard case: putting on A1 will cause double
     print('strategic WIN by following double')
-    show_net(net, State().play('B1 A3'))
+    show_net(net, state_class().play('B1 A3'))
+
+
+if __name__ == '__main__':
+    from state_connect4 import State as StateClass
+    # from state import State as StateClass
+    l_net = main(StateClass)
+    print(l_net)

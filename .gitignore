@@ -5,4 +5,5 @@
 /.idea/modules.xml
 /.idea/MuesliJupyterExample.iml
 /.idea/vcs.xml
-/bckp
+/bckp/
+/runs/

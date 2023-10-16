@@ -3,8 +3,6 @@
 import torch
 import numpy as np
 
-from state_connect4 import State
-
 batch_size = 32
 num_steps = 100
 K = 1
@@ -47,11 +45,11 @@ def gen_target(state, ep):
     return x, rs, acts, axs, ps, sas, seas, szs
 
 
-def train(episodes, net, optimizer):
+def train(episodes, net, optimizer, state_class):
     # Train neural net
     pg_loss_sum, cmpo_loss_sum, v_loss_sum = 0, 0, 0
     net.train()
-    state = State()
+    state = state_class()
 
     for _ in range(num_steps):
         targets = [gen_target(state, episodes[np.random.randint(len(episodes))]) for j in range(batch_size)]

@@ -5,8 +5,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 
-from state_connect4 import State
-
 
 class Conv(nn.Module):
     def __init__(self, filters0, filters1, kernel_size, bn=False):
@@ -88,6 +86,7 @@ class Prediction(nn.Module):
             p, v = self(torch.from_numpy(rp).unsqueeze(0))
         return p.cpu().numpy()[0], v.cpu().numpy()[0][0]
 
+
 class Dynamics(nn.Module):
     '''Abstract state transition'''
     def __init__(self, rp_shape, act_shape):
@@ -112,9 +111,9 @@ class Dynamics(nn.Module):
 
 class Net(nn.Module):
     # Whole net
-    def __init__(self):
+    def __init__(self, state_class):
         super().__init__()
-        state = State()
+        state = state_class()
         input_shape = state.feature().shape
         action_shape = state.action_feature(0).shape
         rp_shape = (num_filters, *input_shape[1:])
