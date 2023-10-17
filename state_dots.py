@@ -57,7 +57,7 @@ class Path(list):
 
 
 class State:
-    def __init__(self, width=7, height=7):
+    def __init__(self, width=9, height=9):
         self.width = width
         self.height = height
         # board with dot states
@@ -89,7 +89,7 @@ class State:
         path.append((x, y))
         neighbours = [
             (nx, ny) for (nx, ny) in self.get_dot_neighbours(x, y)
-            if self.board[nx, ny] & (self.player | ENABLED)
+            if self.board[nx, ny] & (self.player | ENABLED) == (self.player | ENABLED)
         ]
         for nx, ny in neighbours:
             if path[0] == (nx, ny):
@@ -118,7 +118,7 @@ class State:
                         if (x, y) in path:
                             is_opened = False
                         else:
-                            if not is_surrounded and (self.board[x, y] & (self.opponent | ENABLED)):
+                            if not is_surrounded and (self.board[x, y] & (self.opponent | ENABLED) == (self.opponent | ENABLED)):
                                 is_surrounded = True
                             internal_area.append((x, y))
                     else:
@@ -144,9 +144,9 @@ class State:
         black_reward = 0
         red_reward = 0
         for bs in [self.board[a // self.width, a % self.height] for a in range(self.action_length())]:
-            if bs & (RED | DISABLED):
+            if bs & (RED | DISABLED) == (RED | DISABLED):
                 black_reward += 1
-            if bs & (BLACK | DISABLED):
+            if bs & (BLACK | DISABLED) == (BLACK | DISABLED):
                 red_reward += 1
         return max(-1, min(1, black_reward - red_reward))
 
