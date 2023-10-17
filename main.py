@@ -172,7 +172,7 @@ def test_tic_tac_toe(net, state_class):
 
 
 if __name__ == '__main__':
-    from state_connect4 import State as StateClass
+    from state_dots import State as StateClass
     # from state import State as StateClass
     l_net = main(StateClass)
     print(l_net)
