@@ -112,7 +112,9 @@ class State:
                             paths.append(path)
                             break
             elif (nx, ny) not in path:
-                self.do_find_paths(paths, path.copy_it(), nx, ny)
+                # path optimization based on pre pre dot
+                if len(path) < 2 or abs(nx - path[-2][0]) > 1 or abs(ny - path[-2][1]) > 1:
+                    self.do_find_paths(paths, path.copy_it(), nx, ny)
 
     def find_paths(self, x, y):
         result = list()
@@ -159,7 +161,7 @@ class State:
                 black_reward += 1
             if bs & (RED | ENABLED) == (RED | ENABLED):
                 red_reward += 1
-        print(max(-1, min(1, black_reward - red_reward)))
+        # print(max(-1, min(1, black_reward - red_reward)))
         return max(-1, min(1, black_reward - red_reward))
 
     def action_length(self):
