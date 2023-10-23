@@ -82,8 +82,8 @@ static void do_find_paths(
 
     for (auto const& nv : neighbours) {
         if (path.front() == nv) {
+            std::vector<Point> vec { std::begin(path), std::end(path) };
             for (auto const& opponent : trace_opponent) {
-                std::vector<Point> vec { std::begin(path), std::end(path) };
                 if (point_in_polygon(vec, opponent)) {
                     paths->push_back(path);
                     break;
@@ -138,6 +138,8 @@ static PyObject* find_paths(PyObject* self, PyObject* args) {
             trace_opponent_set.insert(Point(x, y));
         }
         Py_DECREF(iter);
+
+        // No strong pointer reference so no need to clean up memory
         // Py_DECREF(trace_player);
         // Py_DECREF(trace_opponent);
 
@@ -159,8 +161,10 @@ static PyObject* find_paths(PyObject* self, PyObject* args) {
             for (auto const& e : p) {
                 PyObject* v = Py_BuildValue("ii", e.x, e.y);
                 PyList_Append(pp, v);
+                Py_DECREF(v);
             }
             PyList_Append(result, pp);
+            Py_DECREF(pp);
         }
 
         return result;

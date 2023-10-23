@@ -1,3 +1,5 @@
+import time
+
 from line_profiler_pycharm import profile
 
 import numpy as np
@@ -11,11 +13,12 @@ RED = 8
 
 
 class State:
-    def __init__(self, width=40, height=40):
+    def __init__(self, width=32, height=32):
         self.width = width
         self.height = height
         # board with dot states
         self.board = np.zeros((self.width, self.height), dtype=int)  # (x, y)
+        # self.legal_actions_set = set([a for a in range(width * height)])
         self.trace = {BLACK: set(), RED: set()}
         self.player = BLACK
         self.opponent = RED
@@ -83,6 +86,9 @@ class State:
                 self.trace[BLACK].remove((x, y))
             if (x, y) in self.trace[RED]:
                 self.trace[RED].remove((x, y))
+            # v = x * self.width + y
+            # if v in self.legal_actions_set:
+            #     self.legal_actions_set.remove(v)
 
     def apply_to_board(self, paths):
         for path in paths:
@@ -98,10 +104,11 @@ class State:
 
     def play(self, action):
         # print(f'empty={sum(sum(self.board == 0))}')
+        # self.legal_actions_set.remove(action)
         x, y = action // self.width, action % self.height
         self.trace[self.player].add((x, y))
         self.board[x, y] = self.player | ENABLED
-        # paths = self.find_paths_py(v)
+        # paths = self.find_paths_py((x, y))
         paths = find_paths(self.trace[self.player], self.trace[self.opponent], x, y)
         self.apply_to_board(paths)
         self.player, self.opponent = self.opponent, self.player
@@ -120,8 +127,9 @@ class State:
                 black_reward += 1
             if bs & (RED | ENABLED) == (RED | ENABLED):
                 red_reward += 1
-        print(max(-1, min(1, black_reward - red_reward)))
-        return max(-1, min(1, black_reward - red_reward))
+        result = max(-1, min(1, black_reward - red_reward))
+        print(result, time.strftime("%D %H:%M:%S", time.localtime()))
+        return result
 
     def action_length(self):
         return self.width * self.height
@@ -129,6 +137,7 @@ class State:
     def legal_actions(self):
         # list of legal actions on each state
         return [a for a in range(self.action_length()) if self.board[a // self.width, a % self.height] == 0]
+        # return list(self.legal_actions_set)
 
     def feature(self):
         # input tensor for neural net (state)

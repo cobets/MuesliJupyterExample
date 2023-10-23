@@ -43,7 +43,7 @@ def main(state_class):
     optimizer = optim.SGD(net.parameters(), lr=3e-4, weight_decay=3e-5, momentum=0.8)
 
     # Display battle results
-    vs_random_once = vs_random(net, state_class)
+    vs_random_once = vs_random(net, state_class, 5)
 
     writer.add_scalars(
         'train/battle',
@@ -132,7 +132,7 @@ def main(state_class):
                 g
             )
 
-            vs_random_once = vs_random(net, state_class)
+            vs_random_once = vs_random(net, state_class, 10)
 
             writer.add_scalars(
                 'train/battle',
