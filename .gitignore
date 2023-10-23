@@ -7,3 +7,6 @@
 /.idea/vcs.xml
 /bckp/
 /runs/
+/dotspath/build/
+/dotspath/dotspath.egg-info/
+/main.py.pclprof

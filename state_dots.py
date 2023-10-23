@@ -2,6 +2,7 @@ from line_profiler_pycharm import profile
 
 import numpy as np
 from matplotlib.path import Path as PlotPath
+from dotspath import find_paths
 
 DISABLED = 1
 ENABLED = 2
@@ -58,20 +59,20 @@ class State:
         return result
 
     @profile
-    def do_find_paths(self, paths, path, x, y, path_set):
-        path.append((x, y))
-        path_set.add((x, y))
-        neighbours = self.get_dot_neighbours(x, y) & self.trace[self.player]
-        for nx, ny in neighbours:
-            if path[0] == (nx, ny):
+    def do_find_paths(self, paths, path, v, path_set):
+        path.append(v)
+        path_set.add(v)
+        neighbours = self.get_dot_neighbours(*v) & self.trace[self.player]
+        for nv in neighbours:
+            if path[0] == nv:
                 if sum(PlotPath(path).contains_points(list(self.trace[self.opponent]))) > 0:
                     paths.append(path)
-            elif (nx, ny) not in path_set:
-                self.do_find_paths(paths, path.copy(), nx, ny, path_set)
+            elif nv not in path_set:
+                self.do_find_paths(paths, path.copy(), nv, path_set)
 
-    def find_paths(self, x, y):
+    def find_paths_py(self, v):
         result = list()
-        self.do_find_paths(result, list(), x, y, set())
+        self.do_find_paths(result, list(), v, set())
         return result
 
     def disable_area(self, area):
@@ -100,7 +101,8 @@ class State:
         x, y = action // self.width, action % self.height
         self.trace[self.player].add((x, y))
         self.board[x, y] = self.player | ENABLED
-        paths = self.find_paths(x, y)
+        # paths = self.find_paths_py(v)
+        paths = find_paths(self.trace[self.player], self.trace[self.opponent], x, y)
         self.apply_to_board(paths)
         self.player, self.opponent = self.opponent, self.player
         return self
