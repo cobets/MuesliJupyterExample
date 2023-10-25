@@ -1,6 +1,6 @@
 import time
 
-from line_profiler_pycharm import profile
+# from line_profiler_pycharm import profile
 
 import numpy as np
 from matplotlib.path import Path as PlotPath
@@ -61,7 +61,7 @@ class State:
                 result.add((x - 1, y + 1))
         return result
 
-    @profile
+    # @profile
     def do_find_paths(self, paths, path, v, path_set):
         path.append(v)
         path_set.add(v)
