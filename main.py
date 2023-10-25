@@ -67,7 +67,7 @@ def main(state_class, checkpoint, state_width, state_height, n_vs_random, state_
             'draw': vs_random_once.get(0, 0),
             'lose': vs_random_once.get(-1, 0)
         },
-        -1
+        continue_from_game - 1
     )
 
     episodes = []
@@ -212,11 +212,11 @@ if __name__ == '__main__':
     main(
         state_class=StateClass,
         checkpoint=None,
-        state_width=24,
-        state_height=24,
-        n_vs_random=25,
+        state_width=8,
+        state_height=8,
+        n_vs_random=100,
         state_dict_saver={
             'path': 'D:/cobets/github/MuesliJupyterExample/models/muesli-dots',
-            'interval': 2
+            'interval': 10
         }
     )
