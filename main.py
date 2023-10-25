@@ -1,5 +1,6 @@
 from torch.utils.tensorboard import SummaryWriter
 import torch.optim as optim
+import torch
 import numpy as np
 
 from nets import Net, show_net
@@ -27,7 +28,7 @@ def vs_random(net, state_class, n=100):
     return results
 
 
-def main(state_class):
+def main(state_class, checkpoint, state_width, state_height, n_vs_random, state_dict_saver):
     # Main algorithm of Muesli
 
     num_games = 50000
@@ -39,11 +40,25 @@ def main(state_class):
 
     writer = SummaryWriter()
 
-    net = Net(state_class)
+    if checkpoint is not None:
+        state_height = checkpoint['state_height']
+        state_width = checkpoint['state_width']
+
+    class StateClassSized(state_class):
+        def __init__(self):
+            super(StateClassSized, self).__init__(state_width, state_height)
+
+    net = Net(StateClassSized)
     optimizer = optim.SGD(net.parameters(), lr=3e-4, weight_decay=3e-5, momentum=0.8)
 
+    continue_from_game = 0
+    if checkpoint is not None:
+        net.load_state_dict(checkpoint['model_state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        continue_from_game = checkpoint['game'] + 1
+
     # Display battle results
-    vs_random_once = vs_random(net, state_class, 5)
+    vs_random_once = vs_random(net, StateClassSized, n_vs_random)
 
     writer.add_scalars(
         'train/battle',
@@ -58,9 +73,11 @@ def main(state_class):
     episodes = []
     result_distribution = {1: 0, 0: 0, -1: 0}
 
-    for g in range(num_games):
+    training_step = 0
+
+    for g in range(continue_from_game, num_games):
         # Generate one episode
-        state = state_class()
+        state = StateClassSized()
 
         features, policies, selected_actions, selected_action_features = [], [], [], []
         sampled_infos = []
@@ -117,10 +134,12 @@ def main(state_class):
 
         # Training of neural net
         if (g + 1) % num_games_one_epoch == 0:
+            training_step += 1
+
             # Show the result distribution of generated episodes
             print(f'game: {g} generated: {sorted(result_distribution.items())}')
 
-            net, pg_loss, cmpo_loss, v_loss = train(episodes, net, optimizer, state_class)
+            net, pg_loss, cmpo_loss, v_loss = train(episodes, net, optimizer, StateClassSized)
 
             writer.add_scalars(
                 'train/loss',
@@ -132,7 +151,7 @@ def main(state_class):
                 g
             )
 
-            vs_random_once = vs_random(net, state_class, 10)
+            vs_random_once = vs_random(net, StateClassSized, n_vs_random)
 
             writer.add_scalars(
                 'train/battle',
@@ -143,6 +162,21 @@ def main(state_class):
                 },
                 g
             )
+
+            if state_dict_saver is not None:
+                if training_step % state_dict_saver['interval'] == 0:
+                    torch.save(
+                        {
+                            'game': g,
+                            'epoch': training_step,
+                            'model_state_dict': net.state_dict(),
+                            'optimizer_state_dict': optimizer.state_dict(),
+                            'state_width': state_width,
+                            'state_height': state_height
+
+                        },
+                        state_dict_saver['path'] + f'-checkpoint-{state_width}-{state_height}-{g}.tar'
+                    )
 
             # show_net(net, State())
             # show_net(net, State().play('A1 C1 A2 C2'))
@@ -174,5 +208,15 @@ def test_tic_tac_toe(net, state_class):
 if __name__ == '__main__':
     from state_dots import State as StateClass
     # from state import State as StateClass
-    l_net = main(StateClass)
-    print(l_net)
+    # checkpoint = torch.load('d:/cobets/github/MuesliJupyterExample/models/muesli-dots-checkpoint-3-3-79.tar')
+    main(
+        state_class=StateClass,
+        checkpoint=None,
+        state_width=24,
+        state_height=24,
+        n_vs_random=25,
+        state_dict_saver={
+            'path': 'D:/cobets/github/MuesliJupyterExample/models/muesli-dots',
+            'interval': 2
+        }
+    )

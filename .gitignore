@@ -10,3 +10,4 @@
 /dotspath/build/
 /dotspath/dotspath.egg-info/
 /main.py.pclprof
+/models/

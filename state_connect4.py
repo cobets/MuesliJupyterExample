@@ -4,8 +4,10 @@ import gym_connect4
 
 
 class State:
-    def __init__(self):
-        self.env = gym.make('Connect4-v0', height=6, width=7, connect=4)
+    def __init__(self, width=7, height=6):
+        self.width = width
+        self.height = height
+        self.env = gym.make('Connect4-v0', height=self.height, width=7, connect=4)
         self.env.reset()
 
     def __str__(self):

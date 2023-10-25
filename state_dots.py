@@ -13,7 +13,7 @@ RED = 8
 
 
 class State:
-    def __init__(self, width=32, height=32):
+    def __init__(self, width=24, height=24):
         self.width = width
         self.height = height
         # board with dot states

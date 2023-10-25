@@ -8,7 +8,9 @@ class State:
     X, Y = 'ABC', '123'
     C = {0: '_', BLACK: 'O', WHITE: 'X'}
 
-    def __init__(self):
+    def __init__(self, width=3, height=3):
+        self.width = width
+        self.height = height
         self.board = np.zeros((3, 3))  # (x, y)
         self.color = 1
         self.win_color = 0
