@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+from config import Config
 
 
 class Conv(nn.Module):
@@ -30,13 +31,9 @@ class ResidualBlock(nn.Module):
         return F.relu(x + (self.conv(x)))
 
 
-num_filters = 16
-num_blocks = 4
-
-
 class Representation(nn.Module):
-    ''' Conversion from observation to inner abstract state '''
-    def __init__(self, input_shape):
+    # Conversion from observation to inner abstract state '''
+    def __init__(self, input_shape, num_filters, num_blocks):
         super().__init__()
         self.input_shape = input_shape
         self.board_size = self.input_shape[1] * self.input_shape[2]
@@ -59,7 +56,7 @@ class Representation(nn.Module):
 
 class Prediction(nn.Module):
     ''' Policy and value prediction from inner abstract state '''
-    def __init__(self, action_shape):
+    def __init__(self, action_shape, num_filters):
         super().__init__()
         self.board_size = np.prod(action_shape[1:])
         self.action_size = action_shape[0] * self.board_size
@@ -89,7 +86,7 @@ class Prediction(nn.Module):
 
 class Dynamics(nn.Module):
     '''Abstract state transition'''
-    def __init__(self, rp_shape, act_shape):
+    def __init__(self, rp_shape, act_shape, num_filters, num_blocks):
         super().__init__()
         self.rp_shape = rp_shape
         self.layer0 = Conv(rp_shape[0] + act_shape[0], num_filters, 3, bn=True)
@@ -111,16 +108,16 @@ class Dynamics(nn.Module):
 
 class Net(nn.Module):
     # Whole net
-    def __init__(self, state_class):
+    def __init__(self, cfg: Config):
         super().__init__()
-        state = state_class()
+        state = cfg.state_class()
         input_shape = state.feature().shape
         action_shape = state.action_feature(0).shape
-        rp_shape = (num_filters, *input_shape[1:])
+        rp_shape = (cfg.num_filters, *input_shape[1:])
 
-        self.representation = Representation(input_shape)
-        self.prediction = Prediction(action_shape)
-        self.dynamics = Dynamics(rp_shape, action_shape)
+        self.representation = Representation(input_shape, cfg.num_filters, cfg.num_blocks)
+        self.prediction = Prediction(action_shape, cfg.num_filters)
+        self.dynamics = Dynamics(rp_shape, action_shape, cfg.num_filters, cfg.num_blocks)
 
     def predict(self, state0, path):
         # Predict p and v from original state and path

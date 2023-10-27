@@ -3,12 +3,12 @@ import torch.optim as optim
 import torch
 import numpy as np
 
+from config import Config
 from nets import Net, show_net
 from train import train
 
+
 #  Battle against random agents
-
-
 def vs_random(net, state_class, n=100):
     results = {}
     for i in range(n):
@@ -18,7 +18,7 @@ def vs_random(net, state_class, n=100):
         while not state.terminal():
             if turn:
                 p, _ = net.predict(state, [])[-1]
-                action = sorted([(a, p[a]) for a in state.legal_actions()], key=lambda x:-x[1])[0][0]
+                action = sorted([(a, p[a]) for a in state.legal_actions()], key=lambda x: -x[1])[0][0]
             else:
                 action = np.random.choice(state.legal_actions())
             state.play(action)
@@ -28,37 +28,21 @@ def vs_random(net, state_class, n=100):
     return results
 
 
-def main(state_class, checkpoint, state_width, state_height, n_vs_random, state_dict_saver):
+def muesli(cfg: Config):
     # Main algorithm of Muesli
-
-    num_games = 50000
-    num_games_one_epoch = 40
-    num_sampled_actions = 10
-    simulation_depth = 1
-
-    C = 1
 
     writer = SummaryWriter()
 
-    if checkpoint is not None:
-        state_height = checkpoint['state_height']
-        state_width = checkpoint['state_width']
+    net = Net(cfg)
+    optimizer = optim.SGD(net.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay, momentum=cfg.momentum)
 
-    class StateClassSized(state_class):
-        def __init__(self):
-            super(StateClassSized, self).__init__(state_width, state_height)
-
-    net = Net(StateClassSized)
-    optimizer = optim.SGD(net.parameters(), lr=3e-4, weight_decay=3e-5, momentum=0.8)
-
-    continue_from_game = 0
-    if checkpoint is not None:
-        net.load_state_dict(checkpoint['model_state_dict'])
-        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-        continue_from_game = checkpoint['game'] + 1
+    if cfg.model_state_dict is not None:
+        net.load_state_dict(cfg.model_state_dict)
+    if cfg.optimizer_state_dict is not None:
+        optimizer.load_state_dict(cfg.optimizer_state_dict)
 
     # Display battle results
-    vs_random_once = vs_random(net, StateClassSized, n_vs_random)
+    vs_random_once = vs_random(net, cfg.state_class, cfg.n_vs_random)
 
     writer.add_scalars(
         'train/battle',
@@ -67,7 +51,7 @@ def main(state_class, checkpoint, state_width, state_height, n_vs_random, state_
             'draw': vs_random_once.get(0, 0),
             'lose': vs_random_once.get(-1, 0)
         },
-        continue_from_game - 1
+        cfg.game - 1
     )
 
     episodes = []
@@ -75,9 +59,9 @@ def main(state_class, checkpoint, state_width, state_height, n_vs_random, state_
 
     training_step = 0
 
-    for g in range(continue_from_game, num_games):
+    for g in range(cfg.game, cfg.num_games):
         # Generate one episode
-        state = StateClassSized()
+        state = cfg.state_class()
 
         features, policies, selected_actions, selected_action_features = [], [], [], []
         sampled_infos = []
@@ -94,13 +78,13 @@ def main(state_class, checkpoint, state_width, state_height, n_vs_random, state_
             policies.append(p_root)
 
             actions, exadvs = [], []
-            for i in range(num_sampled_actions):  # num_sampled_actions == N
+            for i in range(cfg.num_sampled_actions):  # num_sampled_actions == N
                 action = np.random.choice(np.arange(len(p_root)), p=p_root)
                 actions.append(action)
 
                 rp = rp_root
                 qs = []
-                for t in range(simulation_depth):
+                for t in range(cfg.simulation_depth):
                     action_feature = state.action_feature(action)
                     rp = net.dynamics.inference(rp, action_feature)
                     p, v = net.prediction.inference(rp)
@@ -108,12 +92,12 @@ def main(state_class, checkpoint, state_width, state_height, n_vs_random, state_
                     action = np.random.choice(np.arange(len(p)), p=p)
 
                 q = np.mean(qs)  # q == q p prior(s, a)
-                exadvs.append(np.exp(np.clip(q - v_root, -C, C)))  # q - v_root == adv(s, a)
+                exadvs.append(np.exp(np.clip(q - v_root, -cfg.C, cfg.C)))  # q - v_root == adv(s, a)
 
             exadv_sum = np.sum(exadvs)
             zs = []
             for exadv in exadvs:
-                z = (1 + exadv_sum - exadv) / num_sampled_actions  # == z cmpo i (s)
+                z = (1 + exadv_sum - exadv) / cfg.num_sampled_actions  # == z cmpo i (s)
                 zs.append(z)
             sampled_infos.append({'a': actions, 'q': qs, 'exadv': exadvs, 'z': zs})
 
@@ -133,13 +117,13 @@ def main(state_class, checkpoint, state_width, state_height, n_vs_random, state_
             'sampled_info': sampled_infos})
 
         # Training of neural net
-        if (g + 1) % num_games_one_epoch == 0:
+        if (g + 1) % cfg.num_games_one_epoch == 0:
             training_step += 1
 
             # Show the result distribution of generated episodes
             print(f'game: {g} generated: {sorted(result_distribution.items())}')
 
-            net, pg_loss, cmpo_loss, v_loss = train(episodes, net, optimizer, StateClassSized)
+            net, pg_loss, cmpo_loss, v_loss = train(episodes, net, optimizer, cfg.state_class)
 
             writer.add_scalars(
                 'train/loss',
@@ -151,7 +135,7 @@ def main(state_class, checkpoint, state_width, state_height, n_vs_random, state_
                 g
             )
 
-            vs_random_once = vs_random(net, StateClassSized, n_vs_random)
+            vs_random_once = vs_random(net, cfg.state_class, cfg.n_vs_random)
 
             writer.add_scalars(
                 'train/battle',
@@ -163,19 +147,21 @@ def main(state_class, checkpoint, state_width, state_height, n_vs_random, state_
                 g
             )
 
-            if state_dict_saver is not None:
-                if training_step % state_dict_saver['interval'] == 0:
+            if cfg.model_save_path is not None:
+                if training_step % cfg.model_save_interval == 0:
                     torch.save(
                         {
                             'game': g,
                             'epoch': training_step,
                             'model_state_dict': net.state_dict(),
                             'optimizer_state_dict': optimizer.state_dict(),
-                            'state_width': state_width,
-                            'state_height': state_height
-
+                            'state_width': cfg.state_width,
+                            'state_height': cfg.state_height,
+                            'num_filters': cfg.num_filters,
+                            'num_blocks': cfg.num_blocks
                         },
-                        state_dict_saver['path'] + f'-checkpoint-{state_width}-{state_height}-{g}.tar'
+                        cfg.model_save_path +
+                        f'-w{cfg.state_width}h{cfg.state_height}-f{cfg.num_filters}b{cfg.num_blocks}-g{g}.tar'
                     )
 
             # show_net(net, State())
@@ -208,15 +194,13 @@ def test_tic_tac_toe(net, state_class):
 if __name__ == '__main__':
     from state_dots import State as StateClass
     # from state import State as StateClass
-    # checkpoint = torch.load('d:/cobets/github/MuesliJupyterExample/models/muesli-dots-checkpoint-3-3-79.tar')
-    main(
-        state_class=StateClass,
-        checkpoint=None,
-        state_width=8,
-        state_height=8,
-        n_vs_random=100,
-        state_dict_saver={
-            'path': 'D:/cobets/github/MuesliJupyterExample/models/muesli-dots',
-            'interval': 10
-        }
-    )
+
+    checkpoint = torch.load('d:/cobets/github/MuesliJupyterExample/models/muesli-dots-checkpoint-8-8-11599.tar')
+    config = Config.from_checkpoint(StateClass, checkpoint)
+    # config = Config(StateClass, 8, 8)
+    config.num_filters = 64
+    config.num_blocks = 16
+    config.model_save_path = 'D:/cobets/github/MuesliJupyterExample/models/muesli-dots'
+    config.model_save_interval = 3
+
+    muesli(config)
