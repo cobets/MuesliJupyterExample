@@ -195,12 +195,13 @@ if __name__ == '__main__':
     from state_dots import State as StateClass
     # from state import State as StateClass
 
-    checkpoint = torch.load('d:/cobets/github/MuesliJupyterExample/models/muesli-dots-checkpoint-8-8-11599.tar')
+    checkpoint = torch.load('d:/cobets/github/MuesliJupyterExample/models/muesli-dots-w8h8-f64b16-g34879.tar')
     config = Config.from_checkpoint(StateClass, checkpoint)
     # config = Config(StateClass, 8, 8)
-    config.num_filters = 64
-    config.num_blocks = 16
     config.model_save_path = 'D:/cobets/github/MuesliJupyterExample/models/muesli-dots'
     config.model_save_interval = 3
+    config.lr = 3e-5
+    config.weight_decay = 3e-6
+    config.momentum = 0.8
 
     muesli(config)
