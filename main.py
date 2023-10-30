@@ -92,7 +92,7 @@ def muesli(cfg: Config):
                     action = np.random.choice(np.arange(len(p)), p=p.numpy(force=True))
 
                 q = np.mean(qs)  # q == q p prior(s, a)
-                exadvs.append(np.exp(np.clip(q - v_root, -cfg.C, cfg.C)))  # q - v_root == adv(s, a)
+                exadvs.append(np.exp(np.clip(q - v_root.item(), -cfg.C, cfg.C)))  # q - v_root == adv(s, a)
 
             exadv_sum = np.sum(exadvs)
             zs = []
