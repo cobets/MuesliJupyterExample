@@ -88,10 +88,10 @@ def muesli(cfg: Config):
                     action_feature = torch.from_numpy(state.action_feature(action)).to(cfg.device)
                     rp = net.dynamics.inference(rp, action_feature)
                     p, v = net.prediction.inference(rp)
-                    qs.append(-v if t % 2 == 0 else v)
+                    qs.append(-v.item() if t % 2 == 0 else v.item())
                     action = np.random.choice(np.arange(len(p)), p=p.numpy(force=True))
 
-                q = torch.mean(qs)  # q == q p prior(s, a)
+                q = np.mean(qs)  # q == q p prior(s, a)
                 exadvs.append(np.exp(np.clip(q - v_root, -cfg.C, cfg.C)))  # q - v_root == adv(s, a)
 
             exadv_sum = np.sum(exadvs)
