@@ -1,5 +1,14 @@
+import torch
+
+
 class Config:
-    def __init__(self, state_class, state_width, state_height):
+    def __init__(self, state_class, state_width, state_height, device=None):
+        if device is None:
+            self.device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+        else:
+            self.device = device
+        self.device = torch.device(self.device)
+
         self.num_filters = 16
         self.num_blocks = 4
 
@@ -27,11 +36,12 @@ class Config:
         self.model_save_interval = 10
 
     @classmethod
-    def from_checkpoint(cls, state_class, checkpoint):
+    def from_checkpoint(cls, state_class, checkpoint, device=None):
         result: Config = cls(
             state_class=state_class,
             state_width=checkpoint['state_width'],
-            state_height=checkpoint['state_height']
+            state_height=checkpoint['state_height'],
+            device=device
         )
 
         for key in ['lr', 'weight_decay', 'momentum']:

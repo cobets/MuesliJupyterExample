@@ -50,8 +50,8 @@ class Representation(nn.Module):
     def inference(self, x):
         self.eval()
         with torch.no_grad():
-            rp = self(torch.from_numpy(x).unsqueeze(0))
-        return rp.cpu().numpy()[0]
+            rp = self(torch.unsqueeze(x, 0))
+        return rp[0]
 
 
 class Prediction(nn.Module):
@@ -80,8 +80,8 @@ class Prediction(nn.Module):
     def inference(self, rp):
         self.eval()
         with torch.no_grad():
-            p, v = self(torch.from_numpy(rp).unsqueeze(0))
-        return p.cpu().numpy()[0], v.cpu().numpy()[0][0]
+            p, v = self(torch.unsqueeze(rp, 0))
+        return p[0], v[0][0]
 
 
 class Dynamics(nn.Module):
@@ -102,27 +102,28 @@ class Dynamics(nn.Module):
     def inference(self, rp, a):
         self.eval()
         with torch.no_grad():
-            rp = self(torch.from_numpy(rp).unsqueeze(0), torch.from_numpy(a).unsqueeze(0))
-        return rp.cpu().numpy()[0]
+            rp = self(torch.unsqueeze(rp, 0), torch.unsqueeze(a, 0))
+        return rp[0]
 
 
 class Net(nn.Module):
     # Whole net
     def __init__(self, cfg: Config):
         super().__init__()
+        self.device = cfg.device
         state = cfg.state_class()
         input_shape = state.feature().shape
         action_shape = state.action_feature(0).shape
         rp_shape = (cfg.num_filters, *input_shape[1:])
 
-        self.representation = Representation(input_shape, cfg.num_filters, cfg.num_blocks)
-        self.prediction = Prediction(action_shape, cfg.num_filters)
-        self.dynamics = Dynamics(rp_shape, action_shape, cfg.num_filters, cfg.num_blocks)
+        self.representation = Representation(input_shape, cfg.num_filters, cfg.num_blocks).to(self.device)
+        self.prediction = Prediction(action_shape, cfg.num_filters).to(self.device)
+        self.dynamics = Dynamics(rp_shape, action_shape, cfg.num_filters, cfg.num_blocks).to(self.device)
 
     def predict(self, state0, path):
         # Predict p and v from original state and path
         outputs = []
-        x = state0.feature()
+        x = torch.from_numpy(state0.feature()).to(self.device)
         rp = self.representation.inference(x)
         outputs.append(self.prediction.inference(rp))
         for action in path:

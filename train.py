@@ -54,14 +54,14 @@ def train(episodes, net, optimizer, state_class):
     for _ in range(num_steps):
         targets = [gen_target(state, episodes[np.random.randint(len(episodes))]) for j in range(batch_size)]
         x, r, a, ax, p_prior, sa, sea, sz = zip(*targets)
-        x = torch.from_numpy(np.array(x))
-        r = torch.from_numpy(np.array(r))
-        a = torch.from_numpy(np.array(a))
-        ax = torch.from_numpy(np.array(ax))
-        p_prior = torch.from_numpy(np.array(p_prior))
-        sa = torch.from_numpy(np.array(sa))
-        sea = torch.from_numpy(np.array(sea))
-        sz = torch.from_numpy(np.array(sz))
+        x = torch.from_numpy(np.array(x)).to(net.device)
+        r = torch.from_numpy(np.array(r)).to(net.device)
+        a = torch.from_numpy(np.array(a)).to(net.device)
+        ax = torch.from_numpy(np.array(ax)).to(net.device)
+        p_prior = torch.from_numpy(np.array(p_prior)).to(net.device)
+        sa = torch.from_numpy(np.array(sa)).to(net.device)
+        sea = torch.from_numpy(np.array(sea)).to(net.device)
+        sz = torch.from_numpy(np.array(sz)).to(net.device)
 
         # Compute losses for k (+ current) steps
         ps, vs = [], []

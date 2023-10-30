@@ -66,7 +66,7 @@ def muesli(cfg: Config):
         features, policies, selected_actions, selected_action_features = [], [], [], []
         sampled_infos = []
         while not state.terminal():
-            feature = state.feature()
+            feature = torch.from_numpy(state.feature()).to(cfg.device)
             rp_root = net.representation.inference(feature)  # rp_root == s
             p_root, v_root = net.prediction.inference(rp_root)  # v_root == v p prior(s)
             p_mask = np.zeros_like(p_root)
@@ -79,17 +79,17 @@ def muesli(cfg: Config):
 
             actions, exadvs = [], []
             for i in range(cfg.num_sampled_actions):  # num_sampled_actions == N
-                action = np.random.choice(np.arange(len(p_root)), p=p_root)
+                action = np.random.choice(np.arange(len(p_root)), p=p_root.numpy(force=True))
                 actions.append(action)
 
                 rp = rp_root
                 qs = []
                 for t in range(cfg.simulation_depth):
-                    action_feature = state.action_feature(action)
+                    action_feature = torch.from_numpy(state.action_feature(action)).to(cfg.device)
                     rp = net.dynamics.inference(rp, action_feature)
                     p, v = net.prediction.inference(rp)
                     qs.append(-v if t % 2 == 0 else v)
-                    action = np.random.choice(np.arange(len(p)), p=p)
+                    action = np.random.choice(np.arange(len(p)), p=p.numpy(force=True))
 
                 q = np.mean(qs)  # q == q p prior(s, a)
                 exadvs.append(np.exp(np.clip(q - v_root, -cfg.C, cfg.C)))  # q - v_root == adv(s, a)
@@ -102,7 +102,7 @@ def muesli(cfg: Config):
             sampled_infos.append({'a': actions, 'q': qs, 'exadv': exadvs, 'z': zs})
 
             # Select action with generated distribution, and then make a transition by that action
-            selected_action = np.random.choice(np.arange(len(p_root)), p=p_root)
+            selected_action = np.random.choice(np.arange(len(p_root)), p=p_root.numpy(force=True))
             selected_actions.append(selected_action)
             selected_action_features.append(state.action_feature(selected_action))
             state.play(selected_action)
@@ -195,13 +195,13 @@ if __name__ == '__main__':
     from state_dots import State as StateClass
     # from state import State as StateClass
 
-    checkpoint = torch.load('d:/cobets/github/MuesliJupyterExample/models/muesli-dots-w8h8-f64b16-g34879.tar')
+    checkpoint = torch.load('d:/cobets/github/MuesliJupyterExample/models/muesli-dots-w8h8-f64b16-g45079.tar')
     config = Config.from_checkpoint(StateClass, checkpoint)
     # config = Config(StateClass, 8, 8)
     config.model_save_path = 'D:/cobets/github/MuesliJupyterExample/models/muesli-dots'
     config.model_save_interval = 3
     config.lr = 3e-5
     config.weight_decay = 3e-6
-    config.momentum = 0.8
+    config.n_vs_random = 2
 
     muesli(config)
