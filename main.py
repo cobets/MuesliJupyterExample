@@ -69,13 +69,13 @@ def muesli(cfg: Config):
             feature = torch.from_numpy(state.feature()).to(cfg.device)
             rp_root = net.representation.inference(feature)  # rp_root == s
             p_root, v_root = net.prediction.inference(rp_root)  # v_root == v p prior(s)
-            p_mask = np.zeros_like(p_root)
+            p_mask = torch.zeros_like(p_root)
             p_mask[state.legal_actions()] = 1
             p_root *= p_mask
             p_root /= p_root.sum()
 
-            features.append(feature)
-            policies.append(p_root)
+            features.append(feature.numpy(force=True))
+            policies.append(p_root.numpy(force=True))
 
             actions, exadvs = [], []
             for i in range(cfg.num_sampled_actions):  # num_sampled_actions == N
