@@ -1,7 +1,12 @@
 import torch
+from enum import Enum
 
 
 class Config:
+    class Optimizer(Enum):
+        SGD = 'sgd'
+        ADAM = 'adam'
+
     def __init__(self, state_class, state_width, state_height, device=None):
         if device is None:
             self.device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
@@ -34,6 +39,8 @@ class Config:
         self.momentum = 0.8
         self.model_save_path = None
         self.model_save_interval = 10
+        self.optimizer = Config.Optimizer.SGD
+        self.episodes = []
 
     @classmethod
     def from_checkpoint(cls, state_class, checkpoint, device=None):
@@ -44,9 +51,10 @@ class Config:
             device=device
         )
 
-        for key in ['lr', 'weight_decay', 'momentum']:
-            for pg in checkpoint['optimizer_state_dict']['param_groups']:
-                setattr(result, key, pg[key])
+        for pg in checkpoint['optimizer_state_dict']['param_groups']:
+            for key in ['lr', 'weight_decay', 'momentum']:
+                if key in pg:
+                    setattr(result, key, pg[key])
 
         result.model_state_dict = checkpoint['model_state_dict']
         result.optimizer_state_dict = checkpoint['optimizer_state_dict']
@@ -56,6 +64,10 @@ class Config:
             result.num_filters = checkpoint['num_filters']
         if 'num_blocks' in checkpoint:
             result.num_blocks = checkpoint['num_blocks']
+        if 'optimizer' in checkpoint:
+            result.optimizer = checkpoint['optimizer']
+        if 'episodes' in checkpoint:
+            result.episodes = checkpoint['episodes']
 
         return result
 

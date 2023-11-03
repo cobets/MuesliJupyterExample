@@ -34,7 +34,10 @@ def muesli(cfg: Config):
     writer = SummaryWriter()
 
     net = Net(cfg)
-    optimizer = optim.SGD(net.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay, momentum=cfg.momentum)
+    if cfg.optimizer == Config.Optimizer.ADAM:
+        optimizer = optim.Adam(net.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay)
+    else:
+        optimizer = optim.SGD(net.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay, momentum=cfg.momentum)
 
     if cfg.model_state_dict is not None:
         net.load_state_dict(cfg.model_state_dict)
@@ -54,7 +57,7 @@ def muesli(cfg: Config):
         cfg.game - 1
     )
 
-    episodes = []
+    episodes = cfg.episodes
     result_distribution = {1: 0, 0: 0, -1: 0}
 
     training_step = 0
@@ -158,10 +161,12 @@ def muesli(cfg: Config):
                             'state_width': cfg.state_width,
                             'state_height': cfg.state_height,
                             'num_filters': cfg.num_filters,
-                            'num_blocks': cfg.num_blocks
+                            'num_blocks': cfg.num_blocks,
+                            'optimizer': cfg.optimizer,
+                            'episodes': episodes
                         },
                         cfg.model_save_path +
-                        f'-w{cfg.state_width}h{cfg.state_height}-f{cfg.num_filters}b{cfg.num_blocks}-g{g}.tar'
+                        f'-w{cfg.state_width}h{cfg.state_height}-f{cfg.num_filters}b{cfg.num_blocks}-g{g}-o{cfg.optimizer}.tar'
                     )
 
             # show_net(net, State())
@@ -195,13 +200,15 @@ if __name__ == '__main__':
     from state_dots import State as StateClass
     # from state import State as StateClass
 
-    checkpoint = torch.load('d:/cobets/github/MuesliJupyterExample/models/muesli-dots-w8h8-f64b16-g45079.tar')
-    config = Config.from_checkpoint(StateClass, checkpoint)
-    # config = Config(StateClass, 8, 8)
-    config.model_save_path = 'D:/cobets/github/MuesliJupyterExample/models/muesli-dots'
-    config.model_save_interval = 3
-    config.lr = 3e-5
-    config.weight_decay = 3e-6
-    config.n_vs_random = 2
+    # checkpoint = torch.load('d:/cobets/github/MuesliJupyterExample/models/muesli-dots-w8h8-f64b16-g45079.tar')
+    # config = Config.from_checkpoint(StateClass, checkpoint)
+    config = Config(StateClass, 8, 8)
+    config.num_filters = 64
+    config.num_blocks = 16
+    config.model_save_path = 'D:/cobets/github/MuesliJupyterExample/models/muesli-dots-adam'
+    # config.model_save_interval = 3
+    # config.lr = 3e-5
+    # config.weight_decay = 3e-6
+    # config.n_vs_random = 2
 
     muesli(config)
