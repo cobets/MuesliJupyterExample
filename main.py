@@ -166,7 +166,7 @@ def muesli(cfg: Config):
                             'episodes': episodes
                         },
                         cfg.model_save_path +
-                        f'-w{cfg.state_width}h{cfg.state_height}-f{cfg.num_filters}b{cfg.num_blocks}-g{g}-o{cfg.optimizer}.tar'
+                        f'-w{cfg.state_width}h{cfg.state_height}-f{cfg.num_filters}b{cfg.num_blocks}-g{g}-o{cfg.optimizer.value}.tar'
                     )
 
             # show_net(net, State())
@@ -200,15 +200,19 @@ if __name__ == '__main__':
     from state_dots import State as StateClass
     # from state import State as StateClass
 
-    # checkpoint = torch.load('d:/cobets/github/MuesliJupyterExample/models/muesli-dots-w8h8-f64b16-g45079.tar')
-    # config = Config.from_checkpoint(StateClass, checkpoint)
-    config = Config(StateClass, 8, 8)
-    config.num_filters = 64
-    config.num_blocks = 16
-    config.model_save_path = 'D:/cobets/github/MuesliJupyterExample/models/muesli-dots-adam'
-    # config.model_save_interval = 3
-    # config.lr = 3e-5
-    # config.weight_decay = 3e-6
-    # config.n_vs_random = 2
+    if False:
+        checkpoint = torch.load('d:/cobets/github/MuesliJupyterExample/models/muesli-dots-adam-w8h8-f64b16-g9-oOptimizer.SGD.tar')
+        config = Config.from_checkpoint(StateClass, checkpoint)
+    else:
+        config = Config(StateClass, 8, 8)
+        config.num_filters = 64
+        config.num_blocks = 16
+        config.model_save_path = 'D:/cobets/github/MuesliJupyterExample/models/muesli-dots'
+        config.model_save_interval = 2
+        config.num_games_one_epoch = 2
+        config.n_vs_random = 5
+
+        # config.lr = 3e-5
+        # config.weight_decay = 3e-6
 
     muesli(config)
