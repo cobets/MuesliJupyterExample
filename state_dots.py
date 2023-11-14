@@ -128,7 +128,7 @@ class State:
             if bs & (RED | ENABLED) == (RED | ENABLED):
                 red_reward += 1
         result = max(-1, min(1, black_reward - red_reward))
-        print(result, time.strftime("%D %H:%M:%S", time.localtime()))
+        # print(result, time.strftime("%D %H:%M:%S", time.localtime()))
         return result
 
     def action_length(self):
